@@ -1,66 +1,44 @@
 package ez
 
 import (
+	"fmt"
+
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 )
 
-// NewFromGRPC wraps a GRPC Error into a standar application error
-func NewFromGRPC(op string, err error) *Error {
-	status := status.Convert(err)
-	code := status.Code()
-	return New(op, GRPCCodeToError(code), status.Message(), err)
+type GrpcException interface {
+	GetGrpcCode() codes.Code
 }
 
-// GRPCCodeToError converts a GRPC error code to a standar application error code
-func GRPCCodeToError(c codes.Code) string {
-	switch c {
-	case codes.FailedPrecondition:
-		return ECONFLICT
-	case codes.Internal:
-		return EINTERNAL
-	case codes.InvalidArgument:
-		return EINVALID
-	case codes.NotFound:
-		return ENOTFOUND
-	case codes.PermissionDenied:
-		return ENOTAUTHORIZED
-	case codes.Unauthenticated:
-		return ENOTAUTHENTICATED
-	case codes.ResourceExhausted:
-		return ERESOURCEEXHAUSTED
-	case codes.Unimplemented:
-		return ENOTIMPLEMENTED
-	case codes.Unavailable:
-		return EUNAVAILABLE
-	default:
-		return EINTERNAL
-	}
+type GrpcErrorBuilder struct {
+	GrpcCode codes.Code
+	Message  string
 }
 
-// ErrorToGRPCCode converts an standar application error code to a GRPC error code
-func ErrorToGRPCCode(err error) codes.Code {
-	code := ErrorCode(err)
-	switch code {
-	case ECONFLICT:
-		return codes.FailedPrecondition
-	case EINTERNAL:
-		return codes.Internal
-	case EINVALID:
-		return codes.InvalidArgument
-	case ENOTFOUND:
-		return codes.NotFound
-	case ENOTAUTHORIZED:
-		return codes.PermissionDenied
-	case ENOTAUTHENTICATED:
-		return codes.Unauthenticated
-	case ERESOURCEEXHAUSTED:
-		return codes.ResourceExhausted
-	case ENOTIMPLEMENTED:
-		return codes.Unimplemented
-	case EUNAVAILABLE:
-		return codes.Unavailable
-	default:
-		return codes.Internal
+func (ptr *GrpcErrorBuilder) GetGrpcCode() codes.Code { return ptr.GrpcCode }
+
+func (ptr *GrpcErrorBuilder) Error() string { return ptr.Message }
+
+type GrpcErrorBuilderWithError struct {
+	GrpcErrorBuilder
+	Err error
+}
+
+func (ptr *GrpcErrorBuilderWithError) GetGrpcCode() codes.Code { return ptr.GrpcCode }
+
+func (ptr *GrpcErrorBuilderWithError) Error() string {
+	return fmt.Sprintf("%s: %#v", ptr.Message, ptr.Err)
+}
+
+func HandleGrpcError(err error) error {
+	if err == nil {
+		return status.Error(codes.Unknown, "unknown error")
+	} else {
+		if grpcErr, ok := err.(GrpcException); ok {
+			return status.Error(grpcErr.GetGrpcCode(), err.Error())
+		} else {
+			return status.Errorf(codes.Internal, "unknown error: %#v", err)
+		}
 	}
 }

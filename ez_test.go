@@ -1,72 +1,99 @@
-package ez
+package ez_test
 
 import (
-	"errors"
 	"testing"
 
+	"github.com/LeonColt/ez"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
+func getBuilder() interface{} {
+	return &ez.Error{
+		Code:    ez.ErrorCodeOk,
+		Message: "OK",
+	}
+}
+
+func TestCheckType(t *testing.T) {
+	err := getBuilder()
+
+	res, ok := err.(ez.ErrorInterface)
+	require.True(t, ok)
+	require.IsType(t, &ez.Error{}, res)
+}
+
+func TestGetCode(t *testing.T) {
+	err := getBuilder()
+
+	res, ok := err.(ez.ErrorInterface)
+	require.True(t, ok)
+	require.IsType(t, &ez.Error{}, res)
+
+	require.Equal(t, ez.ErrorCode(ez.ErrorCodeOk), ez.ErrorCode(ez.ErrorCodeOk))
+}
+
+func TestGetError(t *testing.T) {
+	err := getBuilder()
+
+	res, ok := err.(ez.ErrorInterface)
+	require.True(t, ok)
+	require.IsType(t, &ez.Error{}, res)
+
+	require.Equal(t, "OK", res.Error())
+}
+
 func TestNew(t *testing.T) {
-	const op = "TestNew"
-	err := New(op, ECONFLICT, "An error message", nil)
+	const operation = "TestNew"
+	err := ez.New(ez.ErrorCodeConflict, "An error message", operation, nil)
 
 	assert.NotNil(t, err)
-	assert.Equal(t, err.Code, "conflict")
+	assert.Equal(t, ez.ErrorCode(ez.ErrorCodeConflict), err.Code)
 	assert.Equal(t, err.Message, "An error message")
-	assert.Equal(t, err.Op, op)
+	assert.Equal(t, err.Operation, operation)
 	assert.Equal(t, err.Err, nil)
 }
 
 func TestWrap(t *testing.T) {
-	const op = "TestNew"
-	wrappedErr := New(op, ECONFLICT, "An error message", nil)
+	const operation = "TestNew"
+	wrappedErr := ez.New(ez.ErrorCodeConflict, "An error message", operation, nil)
 
-	const newOp = "TestWrap"
-	err := Wrap(newOp, wrappedErr)
+	const newOperation = "TestWrap"
+	err := ez.Wrap(newOperation, wrappedErr)
 
 	assert.NotNil(t, err)
-	assert.Equal(t, err.Code, "conflict")
+	assert.Equal(t, ez.ErrorCode(ez.ErrorCodeConflict), err.Code)
 	assert.Equal(t, err.Message, "An error message")
-	assert.Equal(t, err.Op, newOp)
+	assert.Equal(t, err.Operation, newOperation)
 	assert.Equal(t, err.Err, wrappedErr)
 }
 
 func TestError(t *testing.T) {
-	const op = "TestError"
-	err := New(op, EINTERNAL, "An internal error", nil)
+	const operation = "TestError"
+	err := ez.New(ez.ErrorCodeConflict, "An internal error", operation, nil)
 
 	msg := err.Error()
 
 	assert.NotNil(t, err)
-	assert.Equal(t, msg, "TestError: <internal> An internal error")
+	assert.Equal(t, "TestError: <conflict> An internal error", msg)
 }
 
 func TestErrorCode(t *testing.T) {
-	const op = "TestErrorCode"
-	err := New(op, EINVALID, "An invalid error", nil)
+	const operation = "TestErrorCode"
+	err := ez.New(ez.ErrorCodeInvalid, "An invalid error", operation, nil)
 
-	code := ErrorCode(err)
+	code := ez.ErrorCodeFromError(err)
 
 	assert.NotNil(t, err)
-	assert.Equal(t, code, "invalid")
+	assert.Equal(t, ez.ErrorCode(ez.ErrorCodeInvalid), code)
 }
 
 func TestErrorMessage(t *testing.T) {
 	const op = "TestErrorMessage"
-	err := New(op, ENOTFOUND, "A not found error", nil)
+	err := ez.New(ez.ErrorCodeNotFound, "A not found error", op, nil)
 
-	msg := ErrorMessage(err)
+	msg := ez.ErrorMessageFromError(err)
 
 	assert.NotNil(t, err)
 	assert.Equal(t, msg, "A not found error")
-}
-
-func TestErrorStacktrace(t *testing.T) {
-	err0 := errors.New("A plain error message")
-	err1 := New("Depth 1", EINTERNAL, "", err0)
-	err2 := New("Depth 2", EINVALID, "Not so original error", err1)
-	err3 := Wrap("Depth 3", err2)
-
-	ErrorStacktrace(err3)
 }

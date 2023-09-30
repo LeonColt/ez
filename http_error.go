@@ -1,58 +1,29 @@
 package ez
 
 import (
-	"net/http"
+	"fmt"
 )
 
-// HTTPStatusToError converts a HTTP error code to a standar application error code
-func HTTPStatusToError(status int) string {
-	switch status {
-	case http.StatusConflict:
-		return ECONFLICT
-	case http.StatusInternalServerError:
-		return EINTERNAL
-	case http.StatusBadRequest:
-		return EINVALID
-	case http.StatusNotFound:
-		return ENOTFOUND
-	case http.StatusForbidden:
-		return ENOTAUTHORIZED
-	case http.StatusUnauthorized:
-		return ENOTAUTHENTICATED
-	case http.StatusTooManyRequests:
-		return ERESOURCEEXHAUSTED
-	case http.StatusNotImplemented:
-		return ENOTIMPLEMENTED
-	case http.StatusServiceUnavailable:
-		return EUNAVAILABLE
-	default:
-		return EINTERNAL
-	}
+type HttpException interface {
+	GetCode() int
 }
 
-// ErrorToHTTPStatus converts an standar application error code to a HTTP status
-func ErrorToHTTPStatus(err error) int {
-	code := ErrorCode(err)
-	switch code {
-	case ECONFLICT:
-		return http.StatusConflict
-	case EINTERNAL:
-		return http.StatusInternalServerError
-	case EINVALID:
-		return http.StatusBadRequest
-	case ENOTFOUND:
-		return http.StatusNotFound
-	case ENOTAUTHORIZED:
-		return http.StatusForbidden
-	case ENOTAUTHENTICATED:
-		return http.StatusUnauthorized
-	case ERESOURCEEXHAUSTED:
-		return http.StatusTooManyRequests
-	case ENOTIMPLEMENTED:
-		return http.StatusNotImplemented
-	case EUNAVAILABLE:
-		return http.StatusServiceUnavailable
-	default:
-		return http.StatusInternalServerError
-	}
+type HttpExceptionBuilder struct {
+	Code    int
+	Message string
+}
+
+func (ptr *HttpExceptionBuilder) GetCode() int { return ptr.Code }
+
+func (ptr *HttpExceptionBuilder) Error() string { return ptr.Message }
+
+type HttpExceptionBuilderWithError struct {
+	HttpExceptionBuilder
+	Err error
+}
+
+func (ptr *HttpExceptionBuilderWithError) GetCode() int { return ptr.Code }
+
+func (ptr *HttpExceptionBuilderWithError) Error() string {
+	return fmt.Sprintf("%s: %#v", ptr.Message, ptr.Err)
 }
