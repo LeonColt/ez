@@ -80,12 +80,12 @@ func TestError(t *testing.T) {
 
 func TestErrorCode(t *testing.T) {
 	const operation = "TestErrorCode"
-	err := ez.New(ez.ErrorCodeInvalid, "An invalid error", operation, nil)
+	err := ez.New(ez.ErrorCodeInvalidArgument, "An invalid error", operation, nil)
 
 	code := ez.ErrorCodeFromError(err)
 
 	assert.NotNil(t, err)
-	assert.Equal(t, ez.ErrorCode(ez.ErrorCodeInvalid), code)
+	assert.Equal(t, ez.ErrorCode(ez.ErrorCodeInvalidArgument), code)
 }
 
 func TestErrorMessage(t *testing.T) {
