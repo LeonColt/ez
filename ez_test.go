@@ -72,10 +72,8 @@ func TestError(t *testing.T) {
 	const operation = "TestError"
 	err := ez.New(ez.ErrorCodeConflict, "An internal error", operation, nil)
 
-	msg := err.Error()
-
 	assert.NotNil(t, err)
-	assert.Equal(t, "TestError: <conflict> An internal error", msg)
+	assert.EqualError(t, err, "6: TestError: An internal error")
 }
 
 func TestErrorCode(t *testing.T) {

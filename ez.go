@@ -96,6 +96,10 @@ func (ptr *Error) GetCode() ErrorCode { return ptr.Code }
 func (e *Error) Error() string {
 	var buf bytes.Buffer
 
+	if e.Code != ErrorCodeOk {
+		fmt.Fprintf(&buf, "%d: ", e.Code)
+	}
+
 	// Print the current operation in our stack, if any.
 	if e.Operation != "" {
 		fmt.Fprintf(&buf, "%s: ", e.Operation)
@@ -106,9 +110,6 @@ func (e *Error) Error() string {
 	if e.Err != nil {
 		buf.WriteString(e.Err.Error())
 	} else {
-		if e.Code != ErrorCodeOk {
-			fmt.Fprintf(&buf, "<%s> ", e.Code)
-		}
 		buf.WriteString(e.Message)
 	}
 	return buf.String()
