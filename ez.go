@@ -3,6 +3,7 @@ package ez
 import (
 	"bytes"
 	"fmt"
+	"net/http"
 )
 
 type ErrorCode int
@@ -80,17 +81,95 @@ type Error struct {
 	Err       error     `json:"err"`
 }
 
+type ErrorOptions struct {
+	Operation string
+	Error     error
+}
+
+type ErrorOption func(*ErrorOptions)
+
+func WithOperation(operation string) ErrorOption {
+	return func(options *ErrorOptions) {
+		options.Operation = operation
+	}
+}
+
+func WithError(err error) ErrorOption {
+	return func(options *ErrorOptions) {
+		options.Error = err
+	}
+}
+
 // New creates and returns a new error
-func New(code ErrorCode, message, operation string, err error) *Error {
-	return &Error{Code: code, Message: message, Operation: operation, Err: err}
+func New(code ErrorCode, message string, opts ...ErrorOption) *Error {
+	opt := ErrorOptions{
+		Operation: "",
+		Error:     nil,
+	}
+	for _, v := range opts {
+		if v != nil {
+			v(&opt)
+		}
+	}
+	err := &Error{Code: code, Message: message}
+	if opt.Operation != "" {
+		err.Operation = opt.Operation
+	}
+	if opt.Error != nil {
+		err.Err = opt.Error
+	}
+	return err
 }
 
 // Wrap returns a new error that contains the passed error but with a different operation, useful for creating stacktraces
-func Wrap(operation string, err error) *Error {
+func Wrap(err error) *Error {
+	return &Error{Code: ErrorCodeFromError(err), Message: ErrorMessageFromError(err), Operation: OperationFromError(err), Err: err}
+}
+
+// Wrap returns a new error that contains the passed error but with a different operation, useful for creating stacktraces
+func WrapWithOperation(operation string, err error) *Error {
 	return &Error{Code: ErrorCodeFromError(err), Message: ErrorMessageFromError(err), Operation: operation, Err: err}
 }
 
-func (ptr *Error) GetCode() ErrorCode { return ptr.Code }
+func (e *Error) GetCode() ErrorCode { return e.Code }
+
+func (e *Error) GetHttpStatusCode() int {
+	switch e.Code {
+	case ErrorCodeCancelled:
+		return 499
+	case ErrorCodeUnknown:
+		return http.StatusInternalServerError
+	case ErrorCodeInvalidArgument:
+		return http.StatusBadRequest
+	case ErrorCodeDeadlineExceeded:
+		return http.StatusRequestTimeout
+	case ErrorCodeNotFound:
+		return http.StatusNotFound
+	case ErrorCodeConflict:
+		return http.StatusConflict
+	case ErrorCodeNotAuthorized:
+		return http.StatusForbidden
+	case ErrorCodeResourceExhausted:
+		return http.StatusTooManyRequests
+	case ErrorCodeFailedPrecondition:
+		return http.StatusPreconditionFailed
+	case ErrorCodeAborted:
+		return http.StatusConflict
+	case ErrorCodeOutOfRange:
+		return http.StatusRequestedRangeNotSatisfiable
+	case ErrorCodeUnimplemented:
+		return http.StatusNotImplemented
+	case ErrorCodeInternal:
+		return http.StatusInternalServerError
+	case ErrorCodeUnavailable:
+		return http.StatusServiceUnavailable
+	case ErrorCodeDataLoss:
+		return http.StatusInternalServerError
+	case ErrorCodeUnauthenticated:
+		return http.StatusUnauthorized
+	}
+	return http.StatusInternalServerError
+}
 
 // Error returns the string representation of the error message.
 func (e *Error) Error() string {
@@ -144,4 +223,15 @@ func ErrorMessageFromError(err error) string {
 		return ErrorMessageFromError(e.Err)
 	}
 	return "An internal error has occurred. Please contact technical support."
+}
+
+func OperationFromError(err error) string {
+	if err == nil {
+		return ""
+	} else if e, ok := err.(*Error); ok && e.Operation != "" {
+		return e.Operation
+	} else if ok && e.Err != nil {
+		return OperationFromError(e.Err)
+	}
+	return ""
 }

@@ -45,7 +45,7 @@ func TestGetError(t *testing.T) {
 
 func TestNew(t *testing.T) {
 	const operation = "TestNew"
-	err := ez.New(ez.ErrorCodeConflict, "An error message", operation, nil)
+	err := ez.New(ez.ErrorCodeConflict, "An error message", ez.WithOperation(operation))
 
 	assert.NotNil(t, err)
 	assert.Equal(t, ez.ErrorCode(ez.ErrorCodeConflict), err.Code)
@@ -56,10 +56,23 @@ func TestNew(t *testing.T) {
 
 func TestWrap(t *testing.T) {
 	const operation = "TestNew"
-	wrappedErr := ez.New(ez.ErrorCodeConflict, "An error message", operation, nil)
+	wrappedErr := ez.New(ez.ErrorCodeConflict, "An error message", ez.WithOperation(operation))
+
+	err := ez.Wrap(wrappedErr)
+
+	assert.NotNil(t, err)
+	assert.Equal(t, ez.ErrorCode(ez.ErrorCodeConflict), err.Code)
+	assert.Equal(t, err.Message, "An error message")
+	assert.Equal(t, err.Operation, operation)
+	assert.Equal(t, err.Err, wrappedErr)
+}
+
+func TestWrapWithOperation(t *testing.T) {
+	const operation = "TestNew"
+	wrappedErr := ez.New(ez.ErrorCodeConflict, "An error message", ez.WithOperation(operation))
 
 	const newOperation = "TestWrap"
-	err := ez.Wrap(newOperation, wrappedErr)
+	err := ez.WrapWithOperation(newOperation, wrappedErr)
 
 	assert.NotNil(t, err)
 	assert.Equal(t, ez.ErrorCode(ez.ErrorCodeConflict), err.Code)
@@ -70,7 +83,7 @@ func TestWrap(t *testing.T) {
 
 func TestError(t *testing.T) {
 	const operation = "TestError"
-	err := ez.New(ez.ErrorCodeConflict, "An internal error", operation, nil)
+	err := ez.New(ez.ErrorCodeConflict, "An internal error", ez.WithOperation(operation))
 
 	assert.NotNil(t, err)
 	assert.EqualError(t, err, "6: TestError: An internal error")
@@ -78,7 +91,7 @@ func TestError(t *testing.T) {
 
 func TestErrorCode(t *testing.T) {
 	const operation = "TestErrorCode"
-	err := ez.New(ez.ErrorCodeInvalidArgument, "An invalid error", operation, nil)
+	err := ez.New(ez.ErrorCodeInvalidArgument, "An invalid error", ez.WithOperation(operation))
 
 	code := ez.ErrorCodeFromError(err)
 
@@ -88,7 +101,7 @@ func TestErrorCode(t *testing.T) {
 
 func TestErrorMessage(t *testing.T) {
 	const op = "TestErrorMessage"
-	err := ez.New(ez.ErrorCodeNotFound, "A not found error", op, nil)
+	err := ez.New(ez.ErrorCodeNotFound, "A not found error", ez.WithOperation(op))
 
 	msg := ez.ErrorMessageFromError(err)
 
