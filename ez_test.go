@@ -1,11 +1,10 @@
 package ez_test
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/LeonColt/ez"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func getBuilder() interface{} {
@@ -19,39 +18,64 @@ func TestCheckType(t *testing.T) {
 	err := getBuilder()
 
 	res, ok := err.(ez.ErrorInterface)
-	require.True(t, ok)
-	require.IsType(t, &ez.Error{}, res)
+	if !ok {
+		t.Fatalf("Expected type ez.ErrorInterface, got %T", err)
+	}
+	if reflect.TypeOf(res) != reflect.TypeOf(&ez.Error{}) {
+		t.Fatalf("Expected type ez.Error, got %T", res)
+	}
 }
 
 func TestGetCode(t *testing.T) {
 	err := getBuilder()
 
 	res, ok := err.(ez.ErrorInterface)
-	require.True(t, ok)
-	require.IsType(t, &ez.Error{}, res)
-
-	require.Equal(t, ez.ErrorCode(ez.ErrorCodeOk), ez.ErrorCode(ez.ErrorCodeOk))
+	if !ok {
+		t.Fatalf("Expected type ez.ErrorInterface, got %T", err)
+	}
+	if reflect.TypeOf(res) != reflect.TypeOf(&ez.Error{}) {
+		t.Errorf("Expected type ez.Error, got %T", res)
+	}
+	if ez.ErrorCode(ez.ErrorCodeOk) != res.GetCode() {
+		t.Errorf("Expected error code %d, got %d", ez.ErrorCodeOk, res.GetCode())
+	}
 }
 
 func TestGetError(t *testing.T) {
 	err := getBuilder()
 
 	res, ok := err.(ez.ErrorInterface)
-	require.True(t, ok)
-	require.IsType(t, &ez.Error{}, res)
+	if !ok {
+		t.Fatalf("Expected type ez.ErrorInterface, got %T", err)
+	}
+	if reflect.TypeOf(res) != reflect.TypeOf(&ez.Error{}) {
+		t.Errorf("Expected type ez.Error, got %T", res)
+	}
 
-	require.Equal(t, "OK", res.Error())
+	if res.Error() != "OK" {
+		t.Errorf("Expected error message 'OK', got '%s'", res.Error())
+	}
 }
 
 func TestNew(t *testing.T) {
 	const operation = "TestNew"
 	err := ez.New(ez.ErrorCodeConflict, "An error message", ez.WithOperation(operation))
 
-	assert.NotNil(t, err)
-	assert.Equal(t, ez.ErrorCode(ez.ErrorCodeConflict), err.Code)
-	assert.Equal(t, err.Message, "An error message")
-	assert.Equal(t, err.Operation, operation)
-	assert.Equal(t, err.Err, nil)
+	if err == nil {
+		t.Fatal("Expected an error, got nil")
+	}
+	if ez.ErrorCode(ez.ErrorCodeConflict) != err.Code {
+		t.Errorf("Expected error code %d, got %d", ez.ErrorCodeConflict, err.Code)
+	}
+	if err.Message != "An error message" {
+		t.Errorf("Expected error message 'An error message', got '%s'", err.Message)
+	}
+	if err.Operation != operation {
+		t.Errorf("Expected operation '%s', got '%s'", operation, err.Operation)
+	}
+	if err.Err != nil {
+		t.Errorf("Expected no wrapped error, got '%v'", err.Err)
+	}
 }
 
 func TestWrap(t *testing.T) {
@@ -60,11 +84,21 @@ func TestWrap(t *testing.T) {
 
 	err := ez.Wrap(wrappedErr)
 
-	assert.NotNil(t, err)
-	assert.Equal(t, ez.ErrorCode(ez.ErrorCodeConflict), err.Code)
-	assert.Equal(t, err.Message, "An error message")
-	assert.Equal(t, err.Operation, operation)
-	assert.Equal(t, err.Err, wrappedErr)
+	if err == nil {
+		t.Fatal("Expected an error, got nil")
+	}
+	if ez.ErrorCode(ez.ErrorCodeConflict) != err.Code {
+		t.Errorf("Expected error code %d, got %d", ez.ErrorCodeConflict, err.Code)
+	}
+	if err.Message != "An error message" {
+		t.Errorf("Expected error message 'An error message', got '%s'", err.Message)
+	}
+	if err.Operation != operation {
+		t.Errorf("Expected operation '%s', got '%s'", operation, err.Operation)
+	}
+	if err.Err != wrappedErr {
+		t.Errorf("Expected wrapped error '%v', got '%v'", wrappedErr, err.Err)
+	}
 }
 
 func TestWrapWithOperation(t *testing.T) {
@@ -74,19 +108,33 @@ func TestWrapWithOperation(t *testing.T) {
 	const newOperation = "TestWrap"
 	err := ez.WrapWithOperation(newOperation, wrappedErr)
 
-	assert.NotNil(t, err)
-	assert.Equal(t, ez.ErrorCode(ez.ErrorCodeConflict), err.Code)
-	assert.Equal(t, err.Message, "An error message")
-	assert.Equal(t, err.Operation, newOperation)
-	assert.Equal(t, err.Err, wrappedErr)
+	if err == nil {
+		t.Fatal("Expected an error, got nil")
+	}
+	if ez.ErrorCode(ez.ErrorCodeConflict) != err.Code {
+		t.Errorf("Expected error code %d, got %d", ez.ErrorCodeConflict, err.Code)
+	}
+	if err.Message != "An error message" {
+		t.Errorf("Expected error message 'An error message', got '%s'", err.Message)
+	}
+	if err.Operation != newOperation {
+		t.Errorf("Expected operation '%s', got '%s'", newOperation, err.Operation)
+	}
+	if err.Err != wrappedErr {
+		t.Errorf("Expected wrapped error '%v', got '%v'", wrappedErr, err.Err)
+	}
 }
 
 func TestError(t *testing.T) {
 	const operation = "TestError"
 	err := ez.New(ez.ErrorCodeConflict, "An internal error", ez.WithOperation(operation))
 
-	assert.NotNil(t, err)
-	assert.EqualError(t, err, "6: TestError: An internal error")
+	if err == nil {
+		t.Fatal("Expected an error, got nil")
+	}
+	if err.Error() != "6: TestError: An internal error" {
+		t.Errorf("Expected error message '6: TestError: An internal error', got '%s'", err.Error())
+	}
 }
 
 func TestErrorCode(t *testing.T) {
@@ -95,8 +143,9 @@ func TestErrorCode(t *testing.T) {
 
 	code := ez.ErrorCodeFromError(err)
 
-	assert.NotNil(t, err)
-	assert.Equal(t, ez.ErrorCode(ez.ErrorCodeInvalidArgument), code)
+	if ez.ErrorCode(ez.ErrorCodeInvalidArgument) != code {
+		t.Errorf("Expected error code %d, got %d", ez.ErrorCodeInvalidArgument, code)
+	}
 }
 
 func TestErrorMessage(t *testing.T) {
@@ -105,6 +154,7 @@ func TestErrorMessage(t *testing.T) {
 
 	msg := ez.ErrorMessageFromError(err)
 
-	assert.NotNil(t, err)
-	assert.Equal(t, msg, "A not found error")
+	if msg != "A not found error" {
+		t.Errorf("Expected error message 'A not found error', got '%s'", msg)
+	}
 }
